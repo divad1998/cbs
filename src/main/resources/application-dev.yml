@@ -1,0 +1,34 @@
+cbs:
+  jwt:
+    expiresAfter: 2592000000
+    secret_key: 7A244326452948404D635166546A576E5A7234753778214125442A472D4A614E
+  students:
+    baseUrl: http://localhost:8080/api/students
+    resetpassword:
+      baseUrl: http://localhost:8080/api/students/forgot-password?token=
+    confirmEmail:
+      baseUrl: http://localhost:8080/api/students/confirm?token=
+
+spring:
+  h2:
+    console:
+      enabled: true
+  datasource:
+    driverClassName: org.h2.Driver
+
+  mail:
+    host: localhost
+    port: 1025
+    username: hello
+    password: hello
+    properties:
+      mail:
+        smtp:
+          ssl:
+            trust: "*"
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
