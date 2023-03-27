@@ -42,6 +42,11 @@ public class Student implements UserDetails {
 
     @Column(unique = true)
     private byte[] parentConsentLetter;
+
+    @Column(unique = true)
+    private byte[] idDocument;
+
+    private String healthStatus;
     private String guarantorFullName;
     private int guarantorAge;
     private String guarantorSex;
@@ -61,7 +66,7 @@ public class Student implements UserDetails {
     private boolean graduated;
 
     @ManyToOne
-    @JoinColumn(referencedColumnName = "affiliateId")
+    @JoinColumn(referencedColumnName = "id")
     private Affiliate affiliate;
 
     private LocalDateTime createdOn;

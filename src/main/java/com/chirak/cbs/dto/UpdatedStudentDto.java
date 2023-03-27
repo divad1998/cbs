@@ -56,6 +56,11 @@ public class UpdatedStudentDto {
     private String email;
 
     private byte[] parentConsentLetter;
+    private byte[] idDocument;
+
+    @NotBlank
+    @NotEmpty
+    private String healthStatus;
 
     @NotBlank
     @NotEmpty
@@ -84,5 +89,5 @@ public class UpdatedStudentDto {
     private boolean registered;
     private boolean admitted;
     private boolean graduated;
-    private String affiliateId;
+    private String referralCode;
 }

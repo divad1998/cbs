@@ -18,26 +18,20 @@ import org.springframework.stereotype.Service;
 public class EmailService {
     private final TokenService tokenService;
     private final JavaMailSender mailSender;
-    @Value("${cbs.students.resetpassword.baseUrl}")
-    private String url1;
-
-    @Value("${cbs.students.confirmEmail.baseUrl}")
-    private String url2;
 
     public EmailService(TokenService tokenService, JavaMailSender mailSender) {
         this.tokenService = tokenService;
         this.mailSender = mailSender;
     }
 
-    @Transactional
-    public void sendEmailConfirmationMail(String firstName, String lastName, String email) throws MessagingException {
-        String studentName = firstName + " " + lastName;
+    public void sendEmailConfirmationMail(String firstName, String lastName, String email, String baseUrl) throws MessagingException {
+        String name = firstName + " " + lastName;
         String token = tokenService.generateToken(email);
-        String link = url2 + token;
+        String link = baseUrl + token;
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
-        String mail = buildMail(studentName, link, "Confirm Email", "confirm your email", "Confirm email");
+        String mail = buildMail(name, link, "Confirm Email", "confirm your email", "Confirm email");
         helper.setText(mail, true);
         helper.setTo(email);
         helper.setSubject("Confirm Email");
@@ -47,14 +41,14 @@ public class EmailService {
     }
 
     @Async
-    public void sendForgotPasswordMail(String firstName, String lastName, String email) throws MessagingException {
-        String studentName = firstName + " " + lastName;
+    public void sendForgotPasswordMail(String firstName, String lastName, String email, String baseUrl) throws MessagingException {
+        String name = firstName + " " + lastName;
         String token = tokenService.generateToken(email);
-        String link = url1 + token; //reset-password endpoint
+        String link = baseUrl + token; //reset-password endpoint
 
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
-        String mail = buildMail(studentName, link, "Forgot Password", "reset your password", "Reset password");
+        String mail = buildMail(name, link, "Forgot Password", "reset your password", "Reset password");
         helper.setText(mail, true);
         helper.setTo(email);
         helper.setSubject("Forgot Password");

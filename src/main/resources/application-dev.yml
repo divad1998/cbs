@@ -3,11 +3,17 @@ cbs:
     expiresAfter: 2592000000
     secret_key: 7A244326452948404D635166546A576E5A7234753778214125442A472D4A614E
   students:
-    baseUrl: http://localhost:8080/api/students
-    resetpassword:
-      baseUrl: http://localhost:8080/api/students/forgot-password?token=
+    resetPassword:
+      validateToken:
+        baseUrl: http://localhost:8080/api/students/forgot-password?token=
     confirmEmail:
       baseUrl: http://localhost:8080/api/students/confirm?token=
+  affiliates:
+    confirmEmail:
+      baseUrl: http://localhost:8080/api/affiliates/confirm?token=
+    resetPassword:
+      validateToken:
+        baseUrl: http://localhost:8080/api/affiliates/forgot-password?token=
 
 spring:
   h2:

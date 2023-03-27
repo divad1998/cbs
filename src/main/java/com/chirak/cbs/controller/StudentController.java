@@ -6,7 +6,6 @@ import com.chirak.cbs.exception.*;
 import com.chirak.cbs.object.ChangePasswordReq;
 import com.chirak.cbs.object.Email;
 import com.chirak.cbs.object.ForgotPasswordReq;
-import com.chirak.cbs.security.AuthenticationRequest;
 import com.chirak.cbs.security.AuthenticationService;
 import com.chirak.cbs.service.StudentService;
 import jakarta.mail.MessagingException;
@@ -31,22 +30,18 @@ public class StudentController {
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     @ResponseStatus(value = HttpStatus.CREATED)
     public void register(@Valid @RequestPart("studentDto") StudentDto studentDto,
-                                        @RequestPart("parentConsentLetter") MultipartFile consentLetter) throws AffiliateNotFoundException, IOException, MessagingException {
-        studentService.register(studentDto, consentLetter);
+                                        @RequestPart("parentConsentLetter") MultipartFile consentLetter,
+                                        @RequestPart("idDocument") MultipartFile idDoc) throws AffiliateException, IOException, MessagingException {
+        studentService.register(studentDto, consentLetter, idDoc);
     }
 
     @GetMapping(path = "/confirm")
-    public void confirmEmail(@RequestParam String token) throws TokenException, StudentNotFoundException {
-        studentService.markAsEnabled(token); //Refactor exceptions
-    }
-
-    @GetMapping(path = "/auth")
-    public void authenticate(@Valid @RequestBody AuthenticationRequest authRequest, HttpServletResponse response) {
-        authService.authenticate(authRequest, response);
+    public void confirmEmail(@RequestParam String token) throws TokenException, StudentException {
+        studentService.markAsEnabled(token);
     }
 
     @PostMapping(path = "/forgot-password")
-    public void forgotPassword(@Valid @RequestBody Email body) throws MessagingException, StudentNotFoundException {
+    public void requestForgotPasswordMail(@Valid @RequestBody Email body) throws MessagingException, StudentException {
         studentService.requestForgotPasswordMail(body.getEmail());
     }
 
@@ -56,25 +51,26 @@ public class StudentController {
     }
 
     @PostMapping(path = "/forgot-password/reset")
-    public void resetPassword(@Valid @RequestBody ForgotPasswordReq resetReq) throws StudentNotFoundException {
+    public void resetPassword(@Valid @RequestBody ForgotPasswordReq resetReq) throws StudentException {
         studentService.resetPassword(resetReq);
     }
 
     @GetMapping(path = "/complete-registration")
-    public void confirmRegistration() throws StudentNotFoundException, AffiliateNotFoundException {
+    public void confirmRegistration() throws StudentException, AffiliateException {
         studentService.markAsRegistered();
     }
 
     @GetMapping
-    public StudentDto get() throws StudentNotFoundException {
+    public StudentDto get() throws StudentException {
         return studentService.get();
     }
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public UpdatedStudentDto update(@Valid @RequestPart("updatedStudentDto") UpdatedStudentDto dto,
-                                                                @RequestPart("parentConsentLetter") MultipartFile file) throws IOException {
+                                                                @RequestPart("parentConsentLetter") MultipartFile consentLetter,
+                                                                @RequestPart("idDocument") MultipartFile idDoc) throws IOException {
 
-        return studentService.update(dto, file);
+        return studentService.update(dto, consentLetter, idDoc);
     }
 
     @PatchMapping(path = "/new-password")

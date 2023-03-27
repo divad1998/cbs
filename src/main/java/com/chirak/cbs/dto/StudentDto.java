@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
 
 @Data
 public class StudentDto {
-    @NotBlank
+    @NotBlank //A value must be entered, and it shouldn't include whitespace characters only.
     @NotEmpty
     private String firstName;
 
-    private String middleName;
+    private String middleName; //no validation
 
     @NotBlank
     @NotEmpty
@@ -23,7 +23,7 @@ public class StudentDto {
     @NotEmpty
     private String sex;
 
-    private int age;
+    private int age; //numbers only
 
     @NotBlank
     @NotEmpty
@@ -51,20 +51,25 @@ public class StudentDto {
 
     @NotBlank
     @NotEmpty
-    @Email(message = "Invalid email format.")
+    @Email(message = "Invalid email format.") //must be a valid email format
     private String email;
 
     @NotBlank
     @NotEmpty
     private String password;
 
-    private byte[] parentConsentLetter;
+    private byte[] parentConsentLetter; //required
+    private byte[] idDocument; //required
+
+    @NotBlank
+    @NotEmpty
+    private String healthStatus;
 
     @NotBlank
     @NotEmpty
     private String guarantorFullName;
 
-    private int guarantorAge;
+    private int guarantorAge; //numbers only
 
     @NotBlank
     @NotEmpty
@@ -83,9 +88,9 @@ public class StudentDto {
     @Email(message = "Invalid email format.")
     private String guarantorEmail;
 
-    private String regNumber;
-    private boolean registered;
-    private boolean admitted;
-    private boolean graduated;
-    private String affiliateId;
+    private String referralCode; // not required
+    private String regNumber; //won't be visible in the registration page
+    private boolean registered; //not visible too
+    private boolean admitted; //same
+    private boolean graduated; //same
 }

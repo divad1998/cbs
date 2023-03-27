@@ -1,5 +1,6 @@
 package com.chirak.cbs.security;
 
+import com.chirak.cbs.entity.Affiliate;
 import com.chirak.cbs.entity.Student;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,7 @@ public class AuthenticationService {
      * @param authRequest
      * @param response
      */
-    public void authenticate(AuthenticationRequest authRequest, HttpServletResponse response) {
+    public void authenticateStudent(AuthenticationRequest authRequest, HttpServletResponse response) {
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword());
         Authentication authResult = authManager.authenticate(authToken);
 
@@ -30,4 +31,13 @@ public class AuthenticationService {
         response.addHeader("Authorization", "Bearer " + jwt);
     }
 
+    public void authenticateAffiliate(AuthenticationRequest authRequest, HttpServletResponse response) {
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword());
+        Authentication authResult = authManager.authenticate(authToken); //the problem dey inside here
+
+        var affiliate = (Affiliate) authResult.getPrincipal();
+        String jwt = jwtService.generateToken(affiliate.getEmail());
+
+        response.addHeader("Authorization", "Bearer " + jwt);
+    }
 }

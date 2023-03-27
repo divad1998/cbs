@@ -1,12 +1,10 @@
 package com.chirak.cbs.controllerAdvice;
 
-import com.chirak.cbs.exception.AffiliateNotFoundException;
+import com.chirak.cbs.exception.AffiliateException;
 import com.chirak.cbs.exception.PasswordException;
-import com.chirak.cbs.exception.StudentNotFoundException;
+import com.chirak.cbs.exception.StudentException;
 import com.chirak.cbs.exception.TokenException;
 import jakarta.mail.MessagingException;
-import org.apache.coyote.Response;
-import org.hibernate.validator.internal.engine.messageinterpolation.parser.MessageDescriptorFormatException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,8 +20,8 @@ public class ControllerAdvisor {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
-    @ExceptionHandler(AffiliateNotFoundException.class)
-    public ResponseEntity<?> handle(AffiliateNotFoundException e) {
+    @ExceptionHandler(AffiliateException.class)
+    public ResponseEntity<?> handle(AffiliateException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
@@ -32,14 +30,14 @@ public class ControllerAdvisor {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
-    @ExceptionHandler(StudentNotFoundException.class)
-    public ResponseEntity<?> handle(StudentNotFoundException e) {
+    @ExceptionHandler(StudentException.class)
+    public ResponseEntity<?> handle(StudentException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> handle(DataIntegrityViolationException e) {
-        return ResponseEntity.badRequest().body("Either phone number or email or consent letter already exists.");
+        return ResponseEntity.badRequest().body("Either phone number or email or consent letter(if present) already exists.");
     }
 
     @ExceptionHandler(TokenException.class)

@@ -1,6 +1,8 @@
 package com.chirak.cbs.security;
 
+import com.chirak.cbs.entity.Affiliate;
 import com.chirak.cbs.entity.Student;
+import com.chirak.cbs.security.affiliate.AffiliateAuthenticationController;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -9,16 +11,24 @@ import org.springframework.stereotype.Service;
 public class SecurityService {
 
     /**
-     * Returns authorized student.
+     * Returns authenticated student.
      *
      * @return
      */
-    public Student authorizedStudent() {
+    public Student authenticatedStudent() {
         return (Student) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
-    public void removeAuthentication(HttpServletResponse response) {
-        response.reset(); //try this.
-
+    /**
+     * Returns authenticated affiliate
+     * @return
+     */
+    public Affiliate authenticatedAffiliate() {
+        return (Affiliate) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
+
+    public void removeAuthentication(HttpServletResponse response) {
+        response.reset();
+    }
+
 }

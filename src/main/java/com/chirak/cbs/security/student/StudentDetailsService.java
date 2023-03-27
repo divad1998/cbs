@@ -1,5 +1,6 @@
-package com.chirak.cbs.security;
+package com.chirak.cbs.security.student;
 
+import com.chirak.cbs.dto.StudentDto;
 import com.chirak.cbs.entity.Student;
 import com.chirak.cbs.repository.StudentRepository;
 import lombok.AllArgsConstructor;
