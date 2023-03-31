@@ -6,9 +6,8 @@ import com.chirak.cbs.repository.TokenRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -44,15 +43,23 @@ public class TokenService {
      *
      */
     public void validate(String token) throws TokenException {
-        Token persistedToken = tokenRepo.findByToken(token);
-        if (!(persistedToken == null)) {
-            if (persistedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-                throw new TokenException("Expired link.");
-            } else {
-                tokenRepo.delete(persistedToken);
-            }
+        Token persistedToken = tokenRepo.findByToken(token).orElseThrow(TokenService::supplyException);
+        if (persistedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new TokenException("Expired link.");
         } else {
-            throw new TokenException("Invalid link.");
+                tokenRepo.delete(persistedToken);
         }
+    }
+
+    public Optional<Token> getToken(String token) {
+        return tokenRepo.findByToken(token);
+    }
+
+    private static TokenException supplyException() {
+        return new TokenException("Invalid token.");
+    }
+
+    public void delete(Token token) {
+        tokenRepo.delete(token);
     }
 }

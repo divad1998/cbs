@@ -5,14 +5,15 @@ import com.chirak.cbs.exception.PasswordException;
 import com.chirak.cbs.exception.StudentException;
 import com.chirak.cbs.exception.TokenException;
 import jakarta.mail.MessagingException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
-@org.springframework.web.bind.annotation.ControllerAdvice
+@ControllerAdvice
 public class ControllerAdvisor {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -35,11 +36,6 @@ public class ControllerAdvisor {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<?> handle(DataIntegrityViolationException e) {
-        return ResponseEntity.badRequest().body("Either phone number or email or consent letter(if present) already exists.");
-    }
-
     @ExceptionHandler(TokenException.class)
     public ResponseEntity<?> handle(TokenException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
@@ -47,16 +43,21 @@ public class ControllerAdvisor {
 
     @ExceptionHandler(MessagingException.class)
     public ResponseEntity<String> handle(MessagingException e) {
-        return ResponseEntity.internalServerError().body("Kindly try again.");
-    }
-
-    @ExceptionHandler(MissingServletRequestPartException.class)
-    public ResponseEntity<String> handle(MissingServletRequestPartException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.internalServerError().body("Kindly check email and try again.");
     }
 
     @ExceptionHandler(PasswordException.class)
     public ResponseEntity<String> handle(PasswordException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<String> handle(BadCredentialsException e) {
+        return ResponseEntity.badRequest().body("Either email or password is invalid.");
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<String> handle(DisabledException e) {
+        return ResponseEntity.status(403).body("Email is yet to be confirmed. Check your mailbox for confirmation link.");
     }
 }

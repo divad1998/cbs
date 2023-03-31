@@ -19,17 +19,15 @@ import java.util.Collections;
 @Data
 public class Student implements UserDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     private String firstName;
     private String middleName;
     private String lastName;
-    private String sex;
+    private String gender;
     private int age;
     private String stateOfOrigin;
-    private String lga;
-    private String city;
-    private String residentialAddress;
+    private String address;
 
     @Column(unique = true)
     private String phoneNumber;
@@ -40,17 +38,14 @@ public class Student implements UserDetails {
     private String email;
     private String password;
 
-    @Column(unique = true)
-    private byte[] parentConsentLetter;
-
-    @Column(unique = true)
-    private byte[] idDocument;
+//    @Column(unique = true)
+//    private byte[] parentConsentLetter;
+//
+//    @Column(unique = true)
+//    private byte[] idDocument;
 
     private String healthStatus;
     private String guarantorFullName;
-    private int guarantorAge;
-    private String guarantorSex;
-    private String guarantorResidentialAddress;
     private String guarantorPhoneNumber;
     private String guarantorEmail;
 
@@ -64,11 +59,7 @@ public class Student implements UserDetails {
     private boolean registered;
     private boolean admitted;
     private boolean graduated;
-
-    @ManyToOne
-    @JoinColumn(referencedColumnName = "id")
-    private Affiliate affiliate;
-
+    private String referralCode;
     private LocalDateTime createdOn;
 
     public void setPassword(String password) {

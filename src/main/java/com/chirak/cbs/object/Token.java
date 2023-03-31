@@ -15,7 +15,7 @@ import java.util.Date;
 @Data
 public class Token {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     private String token;
     private LocalDateTime createdAt = LocalDateTime.now();

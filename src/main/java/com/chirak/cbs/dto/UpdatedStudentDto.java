@@ -22,7 +22,7 @@ public class UpdatedStudentDto {
 
     @NotBlank
     @NotEmpty
-    private String sex;
+    private String gender;
 
     private int age;
 
@@ -32,58 +32,19 @@ public class UpdatedStudentDto {
 
     @NotBlank
     @NotEmpty
-    private String lga;
-
-    @NotBlank
-    @NotEmpty
-    private String city;
-
-    @NotBlank
-    @NotEmpty
-    private String residentialAddress;
-
+    private String address;
 
     @NotBlank
     @NotEmpty
     private String phoneNumber;
+
     @NotBlank
     @NotEmpty
     private String studyCenter;
 
     @NotBlank
     @NotEmpty
-    @Email(message = "Invalid email format.")
-    private String email;
-
-    private byte[] parentConsentLetter;
-    private byte[] idDocument;
-
-    @NotBlank
-    @NotEmpty
     private String healthStatus;
-
-    @NotBlank
-    @NotEmpty
-    private String guarantorFullName;
-
-    private int guarantorAge;
-
-    @NotBlank
-    @NotEmpty
-    private String guarantorSex;
-
-    @NotBlank
-    @NotEmpty
-    private String guarantorResidentialAddress;
-
-    @NotBlank
-    @NotEmpty
-    private String guarantorPhoneNumber;
-
-    @NotBlank
-    @NotEmpty
-    @Email(message = "Invalid email format.")
-    private String guarantorEmail;
 
     private String regNumber;
     private boolean registered;

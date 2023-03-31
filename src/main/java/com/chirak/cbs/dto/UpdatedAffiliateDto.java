@@ -17,7 +17,7 @@ public class UpdatedAffiliateDto {
 
     @NotBlank
     @NotEmpty
-    private String sex;
+    private String gender;
 
     @NotBlank
     @NotEmpty

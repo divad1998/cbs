@@ -4,25 +4,30 @@ import com.chirak.cbs.dto.StudentDto;
 import com.chirak.cbs.dto.UpdatedStudentDto;
 import com.chirak.cbs.entity.Affiliate;
 import com.chirak.cbs.entity.Student;
-import com.chirak.cbs.exception.*;
+import com.chirak.cbs.exception.AffiliateException;
+import com.chirak.cbs.exception.PasswordException;
+import com.chirak.cbs.exception.StudentException;
+import com.chirak.cbs.exception.TokenException;
 import com.chirak.cbs.mapper.StudentMapper;
 import com.chirak.cbs.object.ChangePasswordReq;
-import com.chirak.cbs.object.ForgotPasswordReq;
+import com.chirak.cbs.object.Token;
+import com.chirak.cbs.repository.AffiliateRepository;
 import com.chirak.cbs.repository.StudentRepository;
 import com.chirak.cbs.security.SecurityService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class StudentService {
-    private final AffiliateService affiliateService;
+    private final AffiliateRepository affiliateRepo;
     private final StudentRepository studentRepo;
     private final EmailService emailService;
     private final TokenService tokenService;
@@ -33,36 +38,58 @@ public class StudentService {
     @Value("${cbs.students.confirmEmail.baseUrl}")
     private String baseUrl1;
 
-    @Value("${cbs.students.resetPassword.validateToken.baseUrl}")
+    @Value("${cbs.students.confirmEmail.newLink.baseUrl}")
     private String baseUrl2;
 
-
-
-    public StudentService(AffiliateService affiliateService,
+    public StudentService(AffiliateRepository affiliateRepo,
                           StudentRepository studentRepo,
                           EmailService emailService,
                           TokenService tokenService,
                           SecurityService securityService) {
-        this.affiliateService = affiliateService;
+        this.affiliateRepo = affiliateRepo;
         this.studentRepo = studentRepo;
         this.emailService = emailService;
         this.tokenService = tokenService;
         this.securityService = securityService;
     }
 
-
     @Transactional
-    public void register(StudentDto studentDto, MultipartFile consentLetter, MultipartFile idDoc) throws IOException, AffiliateException, MessagingException {
-        studentDto.setParentConsentLetter(consentLetter.getBytes());
-        studentDto.setIdDocument(idDoc.getBytes());
-        Student student = studentMapper.toStudent(studentDto);
-        student.setPassword(studentDto.getPassword());
-        if (studentDto.getReferralCode() != null) {
-            student.setAffiliate(affiliateService.findByReferralCode(studentDto.getReferralCode()));
+    public void register(StudentDto studentDto) throws AffiliateException, MessagingException, StudentException {
+        //Early return
+        if (studentRepo.findByEmail(studentDto.getEmail()).isEmpty() && studentRepo.findByPhoneNumber(studentDto.getPhoneNumber()).isEmpty()) {
+            var student = studentMapper.toStudent(studentDto);
+            student.setPassword(studentDto.getPassword());
+            var referralCode = studentDto.getReferralCode();
+            Student savedStudent;
+            if (referralCode != null) {
+                if (affiliateRepo.findByReferralCode(referralCode).isPresent()) {
+                    savedStudent = studentRepo.save(student);
+                } else {
+                    throw new AffiliateException("Invalid referral code.");
+                }
+            } else {
+                savedStudent = studentRepo.save(student);
+            }
+            //send confirmatory mail
+            emailService.sendEmailConfirmationMail(savedStudent.getFirstName(), savedStudent.getLastName(), savedStudent.getEmail(), baseUrl1, baseUrl2);
+
+        } else {
+            throw new StudentException("Either email or phone number already exists.");
         }
-        Student savedStudent = studentRepo.save(student);
-        //send email confirmation mail
-        emailService.sendEmailConfirmationMail(savedStudent.getFirstName(), savedStudent.getLastName(), savedStudent.getEmail(), baseUrl1);
+    }
+
+    public void newConfirmationMail(String token) throws StudentException, MessagingException, TokenException {
+        if (tokenService.getToken(token).isPresent()) {
+            Token persistedToken = tokenService.getToken(token).get();
+
+            String email = token.substring(7);
+            Student student = studentRepo.findByEmail(email).orElseThrow(StudentService::returnException);
+            emailService.sendEmailConfirmationMail(student.getFirstName(), student.getLastName(), student.getEmail(), baseUrl1, baseUrl2);
+
+            tokenService.delete(persistedToken);
+        } else {
+            throw new TokenException("Invalid token.");
+        }
     }
 
     /**
@@ -79,48 +106,33 @@ public class StudentService {
     }
 
     //ToDo: what if student hits this without paying? is there a way for the frontend to call this endpoint without it being shown on the browser? if yes, good!
-    public void markAsRegistered() {
+    public void markAsRegistered() throws AffiliateException {
         Student student = securityService.authenticatedStudent();
         student.setRegistered(true);
         student.setRegNumber("CBS-" + LocalDate.now().getYear() + "-" + student.getId());
         Student savedStudent = studentRepo.save(student);
         //increase balance of Affiliate and persist
-        Affiliate affiliate = savedStudent.getAffiliate();
-        if (affiliate != null) {
+        var referralCode = savedStudent.getReferralCode();
+        if (affiliateRepo.findByReferralCode(referralCode).isPresent()) {
+            //increase balance of affiliate
+            Affiliate affiliate = affiliateRepo.findByReferralCode(referralCode).get();
             affiliate.increaseBalance(500);
-            affiliateService.afterBalanceIncrease(affiliate);
+            affiliateRepo.save(affiliate);
         }
+        //Do nothing if affiliate's account has been deleted.
     }
 
-    public void requestForgotPasswordMail(String email) throws StudentException, MessagingException, StudentException {
-        Student student = studentRepo
-                                            .findByEmail(email)
-                                            .orElseThrow(StudentService::returnException);
-
+    @Transactional
+    public void newRandomPassword(String email) throws StudentException, MessagingException {
+        Student student = studentRepo.findByEmail(email).orElseThrow(StudentService::returnException);
         if (student.isEnabled()) {
-            emailService.sendForgotPasswordMail(student.getFirstName(), student.getLastName(), student.getEmail(), baseUrl2);
-        } else {
-            throw new StudentException("Email wasn't confirmed after registration.");
-        }
-    }
+            String newPassword = tokenService.generateRandomString();
+            student.setPassword(newPassword);
+            Student savedStudent = studentRepo.save(student);
 
-    /**
-     * Validates generated token.
-     * @param token
-     */
-    public void validatePasswordResetToken(String token) throws TokenException {
-        tokenService.validate(token);
-    }
-
-    public void resetPassword(ForgotPasswordReq resetReq) throws StudentException {
-        Student student = studentRepo
-                                                .findByEmail(resetReq.getEmail())
-                                                .orElseThrow(StudentService::returnException);
-        if (student.isEnabled()) {
-            student.setPassword(resetReq.getPassword());
-            studentRepo.save(student);
+            emailService.sendForgotPasswordMail(savedStudent.getFirstName(), savedStudent.getLastName(), savedStudent.getEmail(), newPassword);
         } else {
-            throw new StudentException("Email wasn't confirmed after registration.");
+            throw new StudentException("Email wasn't confirmed after registration");
         }
     }
 
@@ -130,33 +142,30 @@ public class StudentService {
      */
     public StudentDto get() {
         Student student = securityService.authenticatedStudent();
-        StudentDto studentDto = studentMapper.toDto(student);
-        studentDto.setPassword(null);
-        if (student.getAffiliate() != null) {
-            studentDto.setReferralCode(student.getAffiliate().getReferralCode());
-        }
-
-        return studentDto;
+        return studentMapper.toDto(student);
     }
 
-    public UpdatedStudentDto update(UpdatedStudentDto dto, MultipartFile consentLetter, MultipartFile idDoc) throws IOException {
-        dto.setParentConsentLetter(consentLetter.getBytes());
-        dto.setIdDocument(idDoc.getBytes());
-        var student = studentMapper.toStudent(dto);
+    public UpdatedStudentDto update(UpdatedStudentDto dto) throws IOException, StudentException {
         var authStudent = securityService.authenticatedStudent();
-        student.setId(authStudent.getId());
-        student.setPassword(authStudent.getPassword());
-        student.setEnabled(authStudent.isEnabled());
-        student.setAffiliate(authStudent.getAffiliate());
+        if ((!authStudent.getPhoneNumber().equals(dto.getPhoneNumber())) && studentRepo.findByPhoneNumber(dto.getPhoneNumber()).isPresent()) {
+            throw new StudentException("Phone number already exists.");
 
-        var savedStudent = studentRepo.save(student);
-        //map back to dto
-        var updatedDto = studentMapper.toUpdatedStudentDto(savedStudent);
-        if (savedStudent.getAffiliate() != null) {
-            updatedDto.setReferralCode(savedStudent.getAffiliate().getReferralCode());
+        } else {
+            authStudent.setFirstName(dto.getFirstName());
+            authStudent.setMiddleName(dto.getMiddleName());
+            authStudent.setLastName(dto.getLastName());
+            authStudent.setGender(dto.getGender());
+            authStudent.setAge(dto.getAge());
+            authStudent.setStateOfOrigin(dto.getStateOfOrigin());
+            authStudent.setAddress(dto.getAddress());
+            authStudent.setPhoneNumber(dto.getPhoneNumber());
+            authStudent.setStudyCenter(dto.getStudyCenter());
+            authStudent.setHealthStatus(dto.getHealthStatus());
+
+            var savedStudent = studentRepo.save(authStudent);
+            //map back to dto
+            return studentMapper.toUpdatedStudentDto(savedStudent);
         }
-
-        return updatedDto;
     }
 
     /**
@@ -164,10 +173,12 @@ public class StudentService {
      * @param req
      * @throws PasswordException
      */
-    public void newPassword(ChangePasswordReq req) throws PasswordException {
+    public void newPassword(ChangePasswordReq req, HttpServletResponse response) throws PasswordException {
         var authStudent = securityService.authenticatedStudent();
         authStudent.setPassword(req.getNewPassword());
         studentRepo.save(authStudent);
+        //log student out
+        securityService.removeAuthentication(response);
     }
 
     public void delete(HttpServletResponse response) {
@@ -175,6 +186,27 @@ public class StudentService {
         studentRepo.deleteById(student.getId());
         //remove authentication
         securityService.removeAuthentication(response);
+    }
+
+    public List<Student> getByReferralCode(String referralCode) {
+        return studentRepo.findByReferralCode(referralCode);
+    }
+
+    @Transactional
+    public void changeEmail(String email, HttpServletResponse response) throws MessagingException, StudentException {
+        if (studentRepo.findByEmail(email).isEmpty()) {
+            Student authenticatedStudent = securityService.authenticatedStudent();
+            authenticatedStudent.setEmail(email);
+            authenticatedStudent.setEnabled(false);
+            Student savedStudent = studentRepo.save(authenticatedStudent);
+
+            //send another confirmatory mail
+            emailService.sendEmailConfirmationMail(savedStudent.getFirstName(), savedStudent.getLastName(), savedStudent.getEmail(), baseUrl1, baseUrl2);
+            //logout student
+            securityService.removeAuthentication(response);
+        } else {
+            throw new StudentException("Email already exists."); //familiar response
+        }
     }
 
     /**

@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
 @Data
 public class StudentDto {
     @NotBlank //A value must be entered, and it shouldn't include whitespace characters only.
@@ -21,7 +19,7 @@ public class StudentDto {
 
     @NotBlank
     @NotEmpty
-    private String sex;
+    private String gender;
 
     private int age; //numbers only
 
@@ -31,35 +29,24 @@ public class StudentDto {
 
     @NotBlank
     @NotEmpty
-    private String lga;
-
-    @NotBlank
-    @NotEmpty
-    private String city;
-
-    @NotBlank
-    @NotEmpty
-    private String residentialAddress;
-
+    private String address;
 
     @NotBlank
     @NotEmpty
     private String phoneNumber;
+
     @NotBlank
     @NotEmpty
     private String studyCenter;
 
     @NotBlank
     @NotEmpty
-    @Email(message = "Invalid email format.") //must be a valid email format
+    @Email(message = "Invalid email format.")
     private String email;
 
     @NotBlank
     @NotEmpty
     private String password;
-
-    private byte[] parentConsentLetter; //required
-    private byte[] idDocument; //required
 
     @NotBlank
     @NotEmpty
@@ -68,16 +55,6 @@ public class StudentDto {
     @NotBlank
     @NotEmpty
     private String guarantorFullName;
-
-    private int guarantorAge; //numbers only
-
-    @NotBlank
-    @NotEmpty
-    private String guarantorSex;
-
-    @NotBlank
-    @NotEmpty
-    private String guarantorResidentialAddress;
 
     @NotBlank
     @NotEmpty

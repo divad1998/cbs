@@ -16,12 +16,12 @@ import java.util.List;
 @Data
 public class Affiliate implements UserDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private long id;
 
     private String firstName;
     private String lastName;
-    private String sex;
+    private String gender;
 
     @Column(unique = true)
     private String phoneNumber;
@@ -37,9 +37,6 @@ public class Affiliate implements UserDetails {
 
     @Enumerated(value = EnumType.STRING)
     private Role role = Role.AFFILIATE;
-
-    @OneToMany
-    private List<Student> students;
 
     private boolean enabled;
 

@@ -9,11 +9,10 @@ import com.chirak.cbs.exception.AffiliateException;
 import com.chirak.cbs.exception.TokenException;
 import com.chirak.cbs.mapper.AffiliateMapper;
 import com.chirak.cbs.mapper.StudentMapper;
-import com.chirak.cbs.object.Email;
-import com.chirak.cbs.object.ForgotPasswordReq;
+import com.chirak.cbs.object.ChangePasswordReq;
+import com.chirak.cbs.object.Token;
 import com.chirak.cbs.repository.AffiliateRepository;
 import com.chirak.cbs.security.SecurityService;
-import com.chirak.cbs.security.student.StudentDetailsService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -29,32 +28,58 @@ public class AffiliateService {
     private final EmailService emailService;
     private final TokenService tokenService;
     private final SecurityService securityService;
+    private final StudentService studentService;
     private final AffiliateMapper mapper = AffiliateMapper.instance;
     private final StudentMapper studentMapper = StudentMapper.instance;
 
     @Value("${cbs.affiliates.confirmEmail.baseUrl}")
     private String baseUrl1;
 
-    @Value("${cbs.affiliates.resetPassword.validateToken.baseUrl}")
+    @Value("${cbs.affiliates.confirmEmail.newLink.baseUrl}")
     private String baseUrl2;
 
     public AffiliateService(AffiliateRepository repo,
                             EmailService emailService,
-                            TokenService tokenService, SecurityService securityService) {
+                            TokenService tokenService, SecurityService securityService, StudentService studentService) {
         this.affiliateRepo = repo;
         this.emailService = emailService;
         this.tokenService = tokenService;
         this.securityService = securityService;
+        this.studentService = studentService;
     }
 
     @Transactional
-    public void create(AffiliateDto affiliateDto) throws MessagingException {
-        var affiliate = mapper.to_Affiliate(affiliateDto);
-        affiliate.setPassword(affiliateDto.getPassword());
-        var savedAffiliate = affiliateRepo.save(affiliate);
+    public void create(AffiliateDto affiliateDto) throws MessagingException, AffiliateException {
+        if (affiliateRepo.findByEmail(affiliateDto.getEmail()).isEmpty() && affiliateRepo.findByPhoneNumber(affiliateDto.getPhoneNumber()).isEmpty()) {
+            var affiliate = mapper.to_Affiliate(affiliateDto);
+            affiliate.setPassword(affiliateDto.getPassword());
+            var savedAffiliate = affiliateRepo.save(affiliate);
+            //now I can send confirmatory email
+            emailService.sendEmailConfirmationMail(savedAffiliate.getFirstName(), savedAffiliate.getLastName(), savedAffiliate.getEmail(), baseUrl1, baseUrl2);
+        } else {
+            throw new AffiliateException("Either phone number or email already exists.");
+        }
+    }
 
-        //now I can send confirmatory email
-        emailService.sendEmailConfirmationMail(savedAffiliate.getFirstName(), savedAffiliate.getLastName(), savedAffiliate.getEmail(), baseUrl1);
+    /**
+     * Triggers a new 'confirm email' mail when link is expired.
+     * @param token
+     * @throws AffiliateException
+     * @throws MessagingException
+     */
+    public void newConfirmationMail(String token) throws AffiliateException, MessagingException, TokenException {
+        if (tokenService.getToken(token).isPresent()) {
+            //get token entity
+            Token persistedToken = tokenService.getToken(token).get();
+
+            String email = token.substring(7);
+            Affiliate affiliate = affiliateRepo.findByEmail(email).orElseThrow(AffiliateService::supplyException);
+            emailService.sendEmailConfirmationMail(affiliate.getFirstName(), affiliate.getLastName(), affiliate.getEmail(), baseUrl1, baseUrl2);
+
+            tokenService.delete(persistedToken);
+        } else {
+            throw new TokenException("Invalid token.");
+        }
     }
 
     public void markAsEnabled(String token) throws TokenException, AffiliateException {
@@ -66,34 +91,15 @@ public class AffiliateService {
         affiliateRepo.save(affiliate);
     }
 
-    public void afterBalanceIncrease(Affiliate affiliate) {
-        affiliateRepo.save(affiliate);
-    }
-
-    public Affiliate findByReferralCode(String referralCode) throws AffiliateException {
-        //return affiliate with referral code
-        Affiliate affiliate = affiliateRepo.findByReferralCode(referralCode).orElseThrow(AffiliateService::supplyException);
-        return affiliate;
-    }
-
-    public void requestForgotPasswordMail(Email email) throws AffiliateException, MessagingException {
-        Affiliate affiliate = affiliateRepo.findByEmail(email.getEmail()).orElseThrow(AffiliateService::supplyException);
+    @Transactional
+    public void newRandomPassword(String email) throws AffiliateException, MessagingException {
+        Affiliate affiliate = affiliateRepo.findByEmail(email).orElseThrow(AffiliateService::supplyException);
         if (affiliate.isEnabled()) {
-            emailService.sendForgotPasswordMail(affiliate.getFirstName(), affiliate.getLastName(), affiliate.getEmail(), baseUrl2);
-        } else {
-            throw new AffiliateException("Email wasn't confirmed after registration.");
-        }
-    }
+            String newPassword = tokenService.generateRandomString();
+            affiliate.setPassword(newPassword);
+            Affiliate savedAffiliate = affiliateRepo.save(affiliate);
 
-    public void validatePasswordResetToken(String token) throws TokenException {
-        tokenService.validate(token);
-    }
-
-    public void resetPassword(ForgotPasswordReq req) throws AffiliateException {
-        Affiliate affiliate = affiliateRepo.findByEmail(req.getEmail()).orElseThrow(AffiliateService::supplyException);
-        if (affiliate.isEnabled()) {
-            affiliate.setPassword(req.getPassword());
-            affiliateRepo.save(affiliate);
+            emailService.sendForgotPasswordMail(savedAffiliate.getFirstName(), savedAffiliate.getLastName(), savedAffiliate.getEmail(), newPassword);
         } else {
             throw new AffiliateException("Email wasn't confirmed after registration.");
         }
@@ -101,11 +107,13 @@ public class AffiliateService {
 
     public List<StudentDto> getReferrals() {
         Affiliate authAffiliate = securityService.authenticatedAffiliate();
-        List<Student> students = authAffiliate.getStudents();
+        var referralCode = authAffiliate.getReferralCode();
+        List<Student> students = studentService.getByReferralCode(referralCode);
         List<StudentDto> studentDtoList = new ArrayList<>();
         if (!students.isEmpty()) {
             for (Student student : students) {
-                studentDtoList.add(studentMapper.toDto(student));
+                StudentDto studentDto = studentMapper.toDto(student);
+                studentDtoList.add(studentDto);
             }
         }
 
@@ -118,30 +126,70 @@ public class AffiliateService {
         return affiliateDto;
     }
 
-    public UpdatedAffiliateDto update(UpdatedAffiliateDto dto) {
-        Affiliate affiliate = mapper.to_Affiliate(dto);
+    public UpdatedAffiliateDto update(UpdatedAffiliateDto dto) throws AffiliateException {
         Affiliate authAffiliate = securityService.authenticatedAffiliate();
+        if ((!authAffiliate.getPhoneNumber().equals(dto.getPhoneNumber())) && affiliateRepo.findByPhoneNumber(dto.getPhoneNumber()).isPresent()) {
+            throw new AffiliateException("Phone number already exists.");
 
-        affiliate.setId(authAffiliate.getId());
-        affiliate.setPassword(authAffiliate.getPassword());
-        affiliate.setBalance(authAffiliate.getBalance());
-        affiliate.setEmail(authAffiliate.getEmail());
-        affiliate.setStudents(authAffiliate.getStudents());
-        affiliate.setEnabled(authAffiliate.isEnabled());
+        } else {
+            //set new fields on authAffiliate
+            authAffiliate.setFirstName(dto.getFirstName());
+            authAffiliate.setLastName(dto.getLastName());
+            authAffiliate.setGender(dto.getGender());
+            authAffiliate.setPhoneNumber(dto.getPhoneNumber());
 
-        Affiliate savedAffiliate = affiliateRepo.save(affiliate);
-        return mapper.to_UpdatedAffiliateDto(savedAffiliate);
+            var savedAffiliate = affiliateRepo.save(authAffiliate);
+            return mapper.to_UpdatedAffiliateDto(savedAffiliate);
+        }
+    }
+
+    public String getBalance() {
+        var authAffiliate = securityService.authenticatedAffiliate();
+        return "N" + authAffiliate.getBalance();
     }
 
     public void delete(HttpServletResponse response) {
         Affiliate authAffiliate = securityService.authenticatedAffiliate();
-        affiliateRepo.delete(authAffiliate);
+        affiliateRepo.deleteById(authAffiliate.getId());
 
         securityService.removeAuthentication(response);
     }
 
-    private static AffiliateException supplyException() {
-        return new AffiliateException("Invalid affiliate.");
+    @Transactional
+    public void changeEmail(String email, HttpServletResponse response) throws MessagingException, AffiliateException {
+        if (affiliateRepo.findByEmail(email).isEmpty()) {
+            Affiliate authenticatedAffiliate = securityService.authenticatedAffiliate();
+            authenticatedAffiliate.setEmail(email);
+            authenticatedAffiliate.setEnabled(false);
+            Affiliate savedAffiliate = affiliateRepo.save(authenticatedAffiliate);
+            //send mail
+            emailService.sendEmailConfirmationMail(savedAffiliate.getFirstName(), savedAffiliate.getLastName(), savedAffiliate.getEmail(), baseUrl1, baseUrl2);
+            //logout affiliate
+            securityService.removeAuthentication(response);
+
+        } else {
+            throw new AffiliateException("Email already exists.");
+        }
     }
 
+    public void newPassword(ChangePasswordReq req, HttpServletResponse response) {
+        var authenticatedAffiliate = securityService.authenticatedAffiliate();
+        authenticatedAffiliate.setPassword(req.getNewPassword());
+        affiliateRepo.save(authenticatedAffiliate);
+        //log affiliate out
+        securityService.removeAuthentication(response);
+    }
+
+    public void deduct(int amount) {
+        var authAffiliate = securityService.authenticatedAffiliate();
+        var balance = authAffiliate.getBalance();
+        balance = balance - amount;
+        authAffiliate.setBalance(balance);
+
+        affiliateRepo.save(authAffiliate);
+    }
+
+    private static AffiliateException supplyException() {
+        return new AffiliateException("Invalid Email.");
+    }
 }

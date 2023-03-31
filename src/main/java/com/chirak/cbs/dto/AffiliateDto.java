@@ -10,19 +10,19 @@ public class AffiliateDto {
 
     @NotBlank //A value must be entered, and it shouldn't include whitespace characters only.
     @NotEmpty
-    private String firstName;
+    private String firstName; //
 
     @NotBlank
     @NotEmpty
-    private String lastName;
+    private String lastName; //
 
     @NotBlank
     @NotEmpty
-    private String sex;
+    private String gender; //
 
     @NotBlank
     @NotEmpty
-    private String phoneNumber;
+    private String phoneNumber; //
 
     @NotBlank
     @NotEmpty
@@ -31,8 +31,9 @@ public class AffiliateDto {
 
     @NotBlank
     @NotEmpty
-    private String password;
+    private String password; //
 
     //No need for balance
     private String referralCode; //not visible in registration form
+
 }

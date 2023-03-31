@@ -2,21 +2,20 @@ package com.chirak.cbs.controller;
 
 import com.chirak.cbs.dto.StudentDto;
 import com.chirak.cbs.dto.UpdatedStudentDto;
-import com.chirak.cbs.exception.*;
+import com.chirak.cbs.exception.AffiliateException;
+import com.chirak.cbs.exception.PasswordException;
+import com.chirak.cbs.exception.StudentException;
+import com.chirak.cbs.exception.TokenException;
 import com.chirak.cbs.object.ChangePasswordReq;
 import com.chirak.cbs.object.Email;
-import com.chirak.cbs.object.ForgotPasswordReq;
-import com.chirak.cbs.security.AuthenticationService;
 import com.chirak.cbs.service.StudentService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
-
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
@@ -25,38 +24,32 @@ import java.io.IOException;
 @AllArgsConstructor
 public class StudentController {
     public final StudentService studentService;
-    private final AuthenticationService authService;
 
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping
     @ResponseStatus(value = HttpStatus.CREATED)
-    public void register(@Valid @RequestPart("studentDto") StudentDto studentDto,
-                                        @RequestPart("parentConsentLetter") MultipartFile consentLetter,
-                                        @RequestPart("idDocument") MultipartFile idDoc) throws AffiliateException, IOException, MessagingException {
-        studentService.register(studentDto, consentLetter, idDoc);
+    public void register(@Valid @RequestBody StudentDto studentDto) throws AffiliateException, IOException, MessagingException, StudentException {
+        studentService.register(studentDto);
     }
 
     @GetMapping(path = "/confirm")
-    public void confirmEmail(@RequestParam String token) throws TokenException, StudentException {
+    public ResponseEntity<String> confirmEmail(@RequestParam String token) throws TokenException, StudentException {
         studentService.markAsEnabled(token);
+        return ResponseEntity.ok("Email confirmed.");
+    }
+
+    @GetMapping(path = "/confirm/new-link")
+    public ResponseEntity<String> newLink(@RequestParam("token") String token) throws StudentException, MessagingException, TokenException {
+        studentService.newConfirmationMail(token);
+        return ResponseEntity.ok("Confirmatory mail sent. Check mailbox.");
     }
 
     @PostMapping(path = "/forgot-password")
-    public void requestForgotPasswordMail(@Valid @RequestBody Email body) throws MessagingException, StudentException {
-        studentService.requestForgotPasswordMail(body.getEmail());
-    }
-
-    @GetMapping(path = "/forgot-password")
-    public void validatePasswordResetToken(@RequestParam String token) throws TokenException {
-        studentService.validatePasswordResetToken(token);
-    }
-
-    @PostMapping(path = "/forgot-password/reset")
-    public void resetPassword(@Valid @RequestBody ForgotPasswordReq resetReq) throws StudentException {
-        studentService.resetPassword(resetReq);
+    public void forgotPassword(@Valid @RequestBody Email email) throws StudentException, MessagingException {
+        studentService.newRandomPassword(email.getEmail());
     }
 
     @GetMapping(path = "/complete-registration")
-    public void confirmRegistration() throws StudentException, AffiliateException {
+    public void confirmRegistration() throws AffiliateException {
         studentService.markAsRegistered();
     }
 
@@ -65,17 +58,20 @@ public class StudentController {
         return studentService.get();
     }
 
-    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public UpdatedStudentDto update(@Valid @RequestPart("updatedStudentDto") UpdatedStudentDto dto,
-                                                                @RequestPart("parentConsentLetter") MultipartFile consentLetter,
-                                                                @RequestPart("idDocument") MultipartFile idDoc) throws IOException {
+    @PatchMapping
+    public UpdatedStudentDto update(@Valid @RequestBody UpdatedStudentDto dto) throws IOException, StudentException {
 
-        return studentService.update(dto, consentLetter, idDoc);
+        return studentService.update(dto);
     }
 
     @PatchMapping(path = "/new-password")
-    public void newPassword(@Valid @RequestBody ChangePasswordReq req) throws PasswordException {
-        studentService.newPassword(req);
+    public void newPassword(@Valid @RequestBody ChangePasswordReq req, HttpServletResponse response) throws PasswordException {
+        studentService.newPassword(req, response);
+    }
+
+    @PatchMapping(path = "/new-email")
+    public void newEmail(@Valid @RequestBody Email email, HttpServletResponse response) throws MessagingException, StudentException {
+        studentService.changeEmail(email.getEmail(), response);
     }
 
     @DeleteMapping
