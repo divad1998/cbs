@@ -6,7 +6,9 @@ import com.chirak.cbs.repository.TokenRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Random;
 
@@ -17,7 +19,8 @@ public class TokenService {
 
     public String generateToken(String email) {
         Token token = new Token();
-        token.setToken(generateRandomString().concat(email));
+        String encodedEmail = Base64.getEncoder().encodeToString(email.getBytes(StandardCharsets.UTF_8));
+        token.setToken(generateRandomString().concat(encodedEmail));
         token.setExpiresAt(token.getCreatedAt().plusMinutes(15L));
 
         return tokenRepo

@@ -8,13 +8,13 @@ import com.chirak.cbs.exception.StudentException;
 import com.chirak.cbs.exception.TokenException;
 import com.chirak.cbs.object.ChangePasswordReq;
 import com.chirak.cbs.object.Email;
+import com.chirak.cbs.object.Response;
 import com.chirak.cbs.service.StudentService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -27,20 +27,21 @@ public class StudentController {
 
     @PostMapping
     @ResponseStatus(value = HttpStatus.CREATED)
-    public void register(@Valid @RequestBody StudentDto studentDto) throws AffiliateException, IOException, MessagingException, StudentException {
+    public Response register(@Valid @RequestBody StudentDto studentDto) throws AffiliateException, IOException, MessagingException, StudentException {
         studentService.register(studentDto);
+        return new Response(true, "New student created. Kindly check your email to verify account.", null);
     }
 
     @GetMapping(path = "/confirm")
-    public ResponseEntity<String> confirmEmail(@RequestParam String token) throws TokenException, StudentException {
+    public Response confirmEmail(@RequestParam String token) throws TokenException, StudentException {
         studentService.markAsEnabled(token);
-        return ResponseEntity.ok("Email confirmed.");
+        return new Response(true, "Email confirmed.", null);
     }
 
     @GetMapping(path = "/confirm/new-link")
-    public ResponseEntity<String> newLink(@RequestParam("token") String token) throws StudentException, MessagingException, TokenException {
+    public Response newLink(@RequestParam("token") String token) throws StudentException, MessagingException, TokenException {
         studentService.newConfirmationMail(token);
-        return ResponseEntity.ok("Confirmatory mail sent. Check mailbox.");
+        return new Response(true, "Confirmation mail sent. Check mailbox.", null);
     }
 
     @PostMapping(path = "/forgot-password")
@@ -49,33 +50,39 @@ public class StudentController {
     }
 
     @GetMapping(path = "/complete-registration")
-    public void confirmRegistration() throws AffiliateException {
+    public Response confirmRegistration() throws AffiliateException {
         studentService.markAsRegistered();
+        return new Response(true, "Student's registration complete.", null);
     }
 
     @GetMapping
-    public StudentDto get() throws StudentException {
-        return studentService.get();
+    public Response get() throws StudentException {
+        StudentDto studentDto = studentService.get();
+        return new Response(true, "Student fetched.", studentDto);
     }
 
     @PatchMapping
-    public UpdatedStudentDto update(@Valid @RequestBody UpdatedStudentDto dto) throws IOException, StudentException {
+    public Response update(@Valid @RequestBody UpdatedStudentDto dto) throws IOException, StudentException {
 
-        return studentService.update(dto);
+        UpdatedStudentDto updatedDto = studentService.update(dto);
+        return new Response(true, "Student updated.", updatedDto);
     }
 
     @PatchMapping(path = "/new-password")
-    public void newPassword(@Valid @RequestBody ChangePasswordReq req, HttpServletResponse response) throws PasswordException {
+    public Response newPassword(@Valid @RequestBody ChangePasswordReq req, HttpServletResponse response) throws PasswordException {
         studentService.newPassword(req, response);
+        return new Response(true, "Password updated.", null);
     }
 
     @PatchMapping(path = "/new-email")
-    public void newEmail(@Valid @RequestBody Email email, HttpServletResponse response) throws MessagingException, StudentException {
+    public Response newEmail(@Valid @RequestBody Email email, HttpServletResponse response) throws MessagingException, StudentException {
         studentService.changeEmail(email.getEmail(), response);
+        return new Response(true, "Email changed successfully. Check mailbox to verify email.", null);
     }
 
     @DeleteMapping
-    public void delete(HttpServletResponse response) {
+    public Response delete(HttpServletResponse response) {
         studentService.delete(response);
+        return new Response(true, "Student deleted successfully.", null);
     }
 }

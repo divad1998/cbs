@@ -8,13 +8,13 @@ import com.chirak.cbs.exception.TokenException;
 import com.chirak.cbs.object.ChangePasswordReq;
 import com.chirak.cbs.object.Deduction;
 import com.chirak.cbs.object.Email;
+import com.chirak.cbs.object.Response;
 import com.chirak.cbs.service.AffiliateService;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,65 +27,77 @@ public class AffiliateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void register(@Valid @RequestBody AffiliateDto affiliateDto) throws MessagingException, AffiliateException {
+    public Response register(@Valid @RequestBody AffiliateDto affiliateDto) throws MessagingException, AffiliateException {
         affiliateService.create(affiliateDto);
+        return new Response(true, "Success. Check mailbox to complete registration.", null);
     }
 
     @GetMapping(path = "/confirm")
-    public ResponseEntity<String> confirmEmail(@RequestParam("token") String token) throws TokenException, AffiliateException {
+    public Response confirmEmail(@RequestParam("token") String token) throws TokenException, AffiliateException {
         affiliateService.markAsEnabled(token);
-        return ResponseEntity.ok("Email confirmed.");
+        return new Response(true, "Email confirmed.", null);
     }
 
     @GetMapping(path = "/confirm/new-link")
-    public ResponseEntity<String> newLink(@RequestParam("token") String token) throws AffiliateException, MessagingException, TokenException {
+    public Response newLink(@RequestParam("token") String token) throws AffiliateException, MessagingException, TokenException {
         affiliateService.newConfirmationMail(token);
-        return ResponseEntity.ok("Confirmatory mail sent. Check mailbox.");
+        return new Response(true, "Confirmation mail sent. Check mailbox.", null);
     }
 
     @PostMapping(path = "/forgot-password")
-    public void forgotPassword(@Valid @RequestBody Email email) throws MessagingException, AffiliateException {
+    public Response forgotPassword(@Valid @RequestBody Email email) throws MessagingException, AffiliateException {
         affiliateService.newRandomPassword(email.getEmail());
+        return new Response(true, "Success. Check mailbox.", null);
     }
 
     @GetMapping(path = "/referrals")
-    public List<StudentDto> getReferrals() {
-        return affiliateService.getReferrals();
+    public Response getReferrals() {
+
+        List<StudentDto> studentDtoList = affiliateService.getReferrals();
+        return new Response(true, "Success. Referrals fetched.", studentDtoList);
     }
 
     @GetMapping
-    public AffiliateDto get() {
-        return affiliateService.get();
+    public Response get() {
+
+        AffiliateDto affiliateDto = affiliateService.get();
+        return new Response(true, "Success.", affiliateDto);
     }
 
     @PatchMapping
-    public UpdatedAffiliateDto update(@Valid @RequestBody UpdatedAffiliateDto dto) throws AffiliateException {
-        return affiliateService.update(dto);
+    public Response update(@Valid @RequestBody UpdatedAffiliateDto dto) throws AffiliateException {
+        UpdatedAffiliateDto updatedDto = affiliateService.update(dto);
+        return new Response(true, "Success. Affiliate updated.", updatedDto);
     }
 
     @GetMapping(path = "/balance")
-    public String getBalance() {
-        return affiliateService.getBalance();
+    public Response getBalance() {
 
+        String balance = affiliateService.getBalance();
+        return new Response(true, "Success. Balance fetched.", balance);
     }
 
     @PatchMapping(path = "/new-email")
-    public void newEmail(@Valid @RequestBody Email email, HttpServletResponse response) throws MessagingException, AffiliateException {
+    public Response newEmail(@Valid @RequestBody Email email, HttpServletResponse response) throws MessagingException, AffiliateException {
         affiliateService.changeEmail(email.getEmail(), response);
+        return new Response(true, "Email changed.", null);
     }
 
     @PatchMapping(path = "/new-password")
-    public void newPassword(@Valid @RequestBody ChangePasswordReq req, HttpServletResponse response) {
+    public Response newPassword(@Valid @RequestBody ChangePasswordReq req, HttpServletResponse response) {
         affiliateService.newPassword(req, response);
+        return new Response(true, "Success. Password changed.", null);
     }
 
     @PatchMapping("/balance/deduction")
-    public void afterPayOut(@Valid @RequestBody Deduction deduction) {
+    public Response afterPayOut(@Valid @RequestBody Deduction deduction) {
         affiliateService.deduct(deduction.getAmount());
+        return new Response(true, "Success.", null);
     }
 
     @DeleteMapping
-    public void delete(HttpServletResponse response) {
+    public Response delete(HttpServletResponse response) {
         affiliateService.delete(response);
+        return new Response(true, "Success. Affiliate deleted.", null);
     }
 }

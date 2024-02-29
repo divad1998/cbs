@@ -22,7 +22,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -53,8 +55,7 @@ public class StudentService {
         this.securityService = securityService;
     }
 
-    @Transactional
-    public void register(StudentDto studentDto) throws AffiliateException, MessagingException, StudentException {
+    public void register(StudentDto studentDto) throws AffiliateException, StudentException, MessagingException {
         //Early return
         if (studentRepo.findByEmail(studentDto.getEmail()).isEmpty() && studentRepo.findByPhoneNumber(studentDto.getPhoneNumber()).isEmpty()) {
             var student = studentMapper.toStudent(studentDto);
@@ -70,7 +71,7 @@ public class StudentService {
             } else {
                 savedStudent = studentRepo.save(student);
             }
-            //send confirmatory mail
+            //send confirmation mail
             emailService.sendEmailConfirmationMail(savedStudent.getFirstName(), savedStudent.getLastName(), savedStudent.getEmail(), baseUrl1, baseUrl2);
 
         } else {
@@ -82,8 +83,11 @@ public class StudentService {
         if (tokenService.getToken(token).isPresent()) {
             Token persistedToken = tokenService.getToken(token).get();
 
-            String email = token.substring(7);
-            Student student = studentRepo.findByEmail(email).orElseThrow(StudentService::returnException);
+            String encodedEmail = token.substring(7);
+            byte[] decodedBytes = Base64.getDecoder().decode(encodedEmail);
+            String decodedEmail = new String(decodedBytes, StandardCharsets.UTF_8);
+
+            Student student = studentRepo.findByEmail(decodedEmail).orElseThrow(StudentService::returnException);
             emailService.sendEmailConfirmationMail(student.getFirstName(), student.getLastName(), student.getEmail(), baseUrl1, baseUrl2);
 
             tokenService.delete(persistedToken);
@@ -100,7 +104,11 @@ public class StudentService {
      */
     public void markAsEnabled(String token) throws TokenException, StudentException {
         tokenService.validate(token);
-        Student student = studentRepo.findByEmail(token.substring(7)).orElseThrow(StudentService::returnException);
+        String encodedEmail = token.substring(7);
+        byte[] decodedBytes = Base64.getDecoder().decode(encodedEmail);
+        String decodedEmail = new String(decodedBytes, StandardCharsets.UTF_8);
+
+        Student student = studentRepo.findByEmail(decodedEmail).orElseThrow(StudentService::returnException);
         student.setEnabled(true);
         studentRepo.save(student);
     }
@@ -192,7 +200,6 @@ public class StudentService {
         return studentRepo.findByReferralCode(referralCode);
     }
 
-    @Transactional
     public void changeEmail(String email, HttpServletResponse response) throws MessagingException, StudentException {
         if (studentRepo.findByEmail(email).isEmpty()) {
             Student authenticatedStudent = securityService.authenticatedStudent();
@@ -200,7 +207,7 @@ public class StudentService {
             authenticatedStudent.setEnabled(false);
             Student savedStudent = studentRepo.save(authenticatedStudent);
 
-            //send another confirmatory mail
+            //send another confirmation mail
             emailService.sendEmailConfirmationMail(savedStudent.getFirstName(), savedStudent.getLastName(), savedStudent.getEmail(), baseUrl1, baseUrl2);
             //logout student
             securityService.removeAuthentication(response);

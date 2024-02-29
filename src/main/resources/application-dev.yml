@@ -26,17 +26,15 @@ spring:
 
   mail:
     host: smtp.gmail.com
-    port: 587
-    username: chirak.bs@gmail.com
-    password: ojicoezzjhrnjkmi
+    port: 465
+    username: divadchigozie@gmail.com
+    password: nzbe btlx xpyf znqw
     properties:
       mail:
         smtp:
-          ssl:
-            trust: "*"
           auth: true
-          starttls:
+          ssl:
             enable: true
-          connectiontimeout: 5000
+          connectiontimeout: 100000
           timeout: 3000
           writetimeout: 5000

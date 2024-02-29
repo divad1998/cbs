@@ -19,7 +19,9 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -54,7 +56,7 @@ public class AffiliateService {
             var affiliate = mapper.to_Affiliate(affiliateDto);
             affiliate.setPassword(affiliateDto.getPassword());
             var savedAffiliate = affiliateRepo.save(affiliate);
-            //now I can send confirmatory email
+            //send confirmation email
             emailService.sendEmailConfirmationMail(savedAffiliate.getFirstName(), savedAffiliate.getLastName(), savedAffiliate.getEmail(), baseUrl1, baseUrl2);
         } else {
             throw new AffiliateException("Either phone number or email already exists.");
@@ -72,8 +74,10 @@ public class AffiliateService {
             //get token entity
             Token persistedToken = tokenService.getToken(token).get();
 
-            String email = token.substring(7);
-            Affiliate affiliate = affiliateRepo.findByEmail(email).orElseThrow(AffiliateService::supplyException);
+            String encodedEmail = token.substring(7);
+            byte[] decodedBytes = Base64.getDecoder().decode(encodedEmail);
+            String decodedEmail = new String(decodedBytes, StandardCharsets.UTF_8);
+            Affiliate affiliate = affiliateRepo.findByEmail(decodedEmail).orElseThrow(AffiliateService::supplyException);
             emailService.sendEmailConfirmationMail(affiliate.getFirstName(), affiliate.getLastName(), affiliate.getEmail(), baseUrl1, baseUrl2);
 
             tokenService.delete(persistedToken);
@@ -84,14 +88,16 @@ public class AffiliateService {
 
     public void markAsEnabled(String token) throws TokenException, AffiliateException {
         tokenService.validate(token);
-        var email = token.substring(7);
-        var affiliate = affiliateRepo.findByEmail(email).orElseThrow(AffiliateService::supplyException);
+        var encodedEmail = token.substring(7);
+        byte[] decodedBytes = Base64.getDecoder().decode(encodedEmail);
+        String decodedEmail = new String(decodedBytes, StandardCharsets.UTF_8);
+
+        var affiliate = affiliateRepo.findByEmail(decodedEmail).orElseThrow(AffiliateService::supplyException);
         affiliate.setEnabled(true);
         affiliate.setReferralCode("cbs-" + affiliate.getFirstName() + "-" + affiliate.getId());
         affiliateRepo.save(affiliate);
     }
 
-    @Transactional
     public void newRandomPassword(String email) throws AffiliateException, MessagingException {
         Affiliate affiliate = affiliateRepo.findByEmail(email).orElseThrow(AffiliateService::supplyException);
         if (affiliate.isEnabled()) {
@@ -122,8 +128,7 @@ public class AffiliateService {
 
     public AffiliateDto get() {
         Affiliate affiliate = securityService.authenticatedAffiliate();
-        AffiliateDto affiliateDto = mapper.to_AffiliateDto(affiliate);
-        return affiliateDto;
+        return mapper.to_AffiliateDto(affiliate);
     }
 
     public UpdatedAffiliateDto update(UpdatedAffiliateDto dto) throws AffiliateException {
@@ -155,7 +160,6 @@ public class AffiliateService {
         securityService.removeAuthentication(response);
     }
 
-    @Transactional
     public void changeEmail(String email, HttpServletResponse response) throws MessagingException, AffiliateException {
         if (affiliateRepo.findByEmail(email).isEmpty()) {
             Affiliate authenticatedAffiliate = securityService.authenticatedAffiliate();

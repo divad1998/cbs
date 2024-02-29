@@ -41,10 +41,10 @@ public class ControllerAdvisor {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 
-    @ExceptionHandler(MessagingException.class)
-    public ResponseEntity<String> handle(MessagingException e) {
-        return ResponseEntity.internalServerError().body("Kindly check email and try again.");
-    }
+//    @ExceptionHandler(MessagingException.class)
+//    public ResponseEntity<String> handle(MessagingException e) {
+//        return ResponseEntity.internalServerError().body(e.getMessage());
+//    }
 
     @ExceptionHandler(PasswordException.class)
     public ResponseEntity<String> handle(PasswordException e) {
