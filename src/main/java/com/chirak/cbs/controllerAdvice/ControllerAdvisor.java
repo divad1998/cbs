@@ -4,7 +4,7 @@ import com.chirak.cbs.exception.AffiliateException;
 import com.chirak.cbs.exception.PasswordException;
 import com.chirak.cbs.exception.StudentException;
 import com.chirak.cbs.exception.TokenException;
-import jakarta.mail.MessagingException;
+import com.chirak.cbs.object.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -18,27 +18,27 @@ public class ControllerAdvisor {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handle(MethodArgumentNotValidException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(new Response(false, e.getMessage(), null));
     }
 
     @ExceptionHandler(AffiliateException.class)
     public ResponseEntity<?> handle(AffiliateException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(new Response(false, e.getMessage(), null));
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<?> handle(UsernameNotFoundException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(new Response(false, e.getMessage(), null));
     }
 
     @ExceptionHandler(StudentException.class)
     public ResponseEntity<?> handle(StudentException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(new Response(false, e.getMessage(), null));
     }
 
     @ExceptionHandler(TokenException.class)
     public ResponseEntity<?> handle(TokenException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+        return ResponseEntity.badRequest().body(new Response(false, e.getMessage(), null));
     }
 
 //    @ExceptionHandler(MessagingException.class)
@@ -47,17 +47,17 @@ public class ControllerAdvisor {
 //    }
 
     @ExceptionHandler(PasswordException.class)
-    public ResponseEntity<String> handle(PasswordException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
+    public ResponseEntity<Response> handle(PasswordException e) {
+        return ResponseEntity.badRequest().body(new Response(false, e.getMessage(), null));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<String> handle(BadCredentialsException e) {
-        return ResponseEntity.badRequest().body("Either email or password is invalid.");
+    public ResponseEntity<Response> handle(BadCredentialsException e) {
+        return ResponseEntity.status(401).body(new Response(false, "Either email or password is invalid.", null));
     }
 
     @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<String> handle(DisabledException e) {
-        return ResponseEntity.status(403).body("Email is yet to be confirmed. Check your mailbox for confirmation link.");
+    public ResponseEntity<Response> handle(DisabledException e) {
+        return ResponseEntity.status(403).body(new Response(false, "Email is yet to be confirmed. Check your mailbox for confirmation link.", null));
     }
 }

@@ -4,14 +4,14 @@ cbs:
     secret_key: 7A244326452948404D635166546A576E5A7234753778214125442A472D4A614E
   students:
     confirmEmail:
-      baseUrl: http://localhost:8080/api/students/confirm?token=
+      baseUrl: https://cbs-25di.onrender.com/api/students/confirm?token=
       newLink:
-        baseUrl: http://localhost:8080/api/students/confirm/new-link?token=
+        baseUrl: https://cbs-25di.onrender.com/api/students/confirm/new-link?token=
   affiliates:
     confirmEmail:
-      baseUrl: http://localhost:8080/api/affiliates/confirm?token=
+      baseUrl: https://cbs-25di.onrender.com/api/affiliates/confirm?token=
       newLink:
-        baseUrl: http://localhost:8080/api/affiliates/confirm/new-link?token=
+        baseUrl: https://cbs-25di.onrender.com/api/affiliates/confirm/new-link?token=
 
 spring:
   h2:
