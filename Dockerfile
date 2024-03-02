@@ -1,17 +1,20 @@
-FROM gradle:8.6.0-jdk21-jammy AS build
-WORKDIR /home/gradle/src
-COPY --chown=gradle:gradle . /home/gradle/src
-RUN gradle build --no-daemon
+# Build stage
+# FROM eclipse-temurin:21-jdk-jammy AS build
+# WORKDIR /app
+# COPY . /app
+# RUN chmod +x ./gradlew
+# RUN ./gradlew build --no-daemon
+#
+# # Run stage
+# FROM eclipse-temurin:21-jdk-jammy
+# WORKDIR /app
+# # Copy the built JAR file from the previous stage
+# COPY --from=build /app/build/libs/*.jar app.jar
+# EXPOSE 8080
+# ENTRYPOINT ["java", "-jar", "app.jar"]
 
-# Now, we setup the runtime environment.
-# Use OpenJDK for running the application.
+#use this
 FROM eclipse-temurin:21-jdk-jammy
-
-# Copy the built artifact from the build stage.
-COPY --from=build /home/gradle/src/build/libs/*.jar /app/spring-boot-application.jar
-
-# Expose the port the app runs on
-EXPOSE 8080
-
-# Run the Spring Boot application
-ENTRYPOINT ["java", "-jar", "/app/spring-boot-application.jar"]
+VOLUME /tmp
+COPY build/libs/*.jar app.jar
+ENTRYPOINT ["java","-jar","/app.jar"]
